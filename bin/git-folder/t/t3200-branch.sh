@@ -98,6 +98,18 @@ test_expect_success 'git branch -m q r/q should fail when r exists' '
 	test_must_fail git branch -m q r/q
 '
 
+test_expect_success 'git branch -M foo bar should fail when bar is checked out' '
+	git branch bar &&
+	git checkout -b foo &&
+	test_must_fail git branch -M bar foo
+'
+
+test_expect_success 'git branch -M baz bam should succeed when baz is checked out' '
+	git checkout -b baz &&
+	git branch bam &&
+	git branch -M baz bam
+'
+
 mv .git/config .git/config-saved
 
 test_expect_success 'git branch -m q q2 without config should succeed' '
@@ -203,10 +215,12 @@ test_expect_success 'test deleting branch deletes branch config' \
      test -z "$(git config branch.my7.remote)" &&
      test -z "$(git config branch.my7.merge)"'
 
-test_expect_success C_LOCALE_OUTPUT 'test deleting branch without config' \
+test_expect_success 'test deleting branch without config' \
     'git branch my7 s &&
      sha1=$(git rev-parse my7 | cut -c 1-7) &&
-     test "$(git branch -d my7 2>&1)" = "Deleted branch my7 (was $sha1)."'
+     echo "Deleted branch my7 (was $sha1)." >expect &&
+     git branch -d my7 >actual 2>&1 &&
+     test_i18ncmp expect actual'
 
 test_expect_success 'test --track without .fetch entries' \
     'git branch --track my8 &&
@@ -538,6 +552,19 @@ test_expect_success 'attempt to delete a branch merged to its base' '
 	# is behind us, so traditionally we would have allowed deleting
 	# it; but my10 is set to track my9 that is further behind.
 	test_must_fail git branch -d my10
+'
+
+test_expect_success 'use set-upstream on the current branch' '
+	git checkout master &&
+	git --bare init myupstream.git &&
+	git push myupstream.git master:refs/heads/frotz &&
+	git remote add origin myupstream.git &&
+	git fetch &&
+	git branch --set-upstream master origin/frotz &&
+
+	test "z$(git config branch.master.remote)" = "zorigin" &&
+	test "z$(git config branch.master.merge)" = "zrefs/heads/frotz"
+
 '
 
 test_done

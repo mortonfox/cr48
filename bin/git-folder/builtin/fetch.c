@@ -540,10 +540,10 @@ static int fetch_refs(struct transport *transport, struct ref *ref_map)
 	return ret;
 }
 
-static int prune_refs(struct transport *transport, struct ref *ref_map)
+static int prune_refs(struct refspec *refs, int ref_count, struct ref *ref_map)
 {
 	int result = 0;
-	struct ref *ref, *stale_refs = get_stale_heads(transport->remote, ref_map);
+	struct ref *ref, *stale_refs = get_stale_heads(refs, ref_count, ref_map);
 	const char *dangling_msg = dry_run
 		? _("   (%s will become dangling)\n")
 		: _("   (%s has become dangling)\n");
@@ -734,8 +734,31 @@ static int do_fetch(struct transport *transport,
 		free_refs(ref_map);
 		return 1;
 	}
-	if (prune)
-		prune_refs(transport, ref_map);
+	if (prune) {
+		/* If --tags was specified, pretend the user gave us the canonical tags refspec */
+		if (tags == TAGS_SET) {
+			const char *tags_str = "refs/tags/*:refs/tags/*";
+			struct refspec *tags_refspec, *refspec;
+
+			/* Copy the refspec and add the tags to it */
+			refspec = xcalloc(ref_count + 1, sizeof(struct refspec));
+			tags_refspec = parse_fetch_refspec(1, &tags_str);
+			memcpy(refspec, refs, ref_count * sizeof(struct refspec));
+			memcpy(&refspec[ref_count], tags_refspec, sizeof(struct refspec));
+			ref_count++;
+
+			prune_refs(refspec, ref_count, ref_map);
+
+			ref_count--;
+			/* The rest of the strings belong to fetch_one */
+			free_refspec(1, tags_refspec);
+			free(refspec);
+		} else if (ref_count) {
+			prune_refs(refs, ref_count, ref_map);
+		} else {
+			prune_refs(transport->remote->fetch, transport->remote->fetch_refspec_nr, ref_map);
+		}
+	}
 	free_refs(ref_map);
 
 	/* if neither --no-tags nor --tags was specified, do automated tag
@@ -875,6 +898,7 @@ static int fetch_one(struct remote *remote, int argc, const char **argv)
 {
 	int i;
 	static const char **refs = NULL;
+	struct refspec *refspec;
 	int ref_nr = 0;
 	int exit_code;
 
@@ -915,8 +939,9 @@ static int fetch_one(struct remote *remote, int argc, const char **argv)
 
 	sigchain_push_common(unlock_pack_on_signal);
 	atexit(unlock_pack);
-	exit_code = do_fetch(transport,
-			parse_fetch_refspec(ref_nr, refs), ref_nr);
+	refspec = parse_fetch_refspec(ref_nr, refs);
+	exit_code = do_fetch(transport, refspec, ref_nr);
+	free_refspec(ref_nr, refspec);
 	transport_disconnect(transport);
 	transport = NULL;
 	return exit_code;
@@ -938,6 +963,15 @@ int cmd_fetch(int argc, const char **argv, const char *prefix)
 
 	argc = parse_options(argc, argv, prefix,
 			     builtin_fetch_options, builtin_fetch_usage, 0);
+
+	if (recurse_submodules != RECURSE_SUBMODULES_OFF) {
+		if (recurse_submodules_default) {
+			int arg = parse_fetch_recurse_submodules_arg("--recurse-submodules-default", recurse_submodules_default);
+			set_config_fetch_recurse_submodules(arg);
+		}
+		gitmodules_config();
+		git_config(submodule_config, NULL);
+	}
 
 	if (all) {
 		if (argc == 1)
@@ -974,12 +1008,6 @@ int cmd_fetch(int argc, const char **argv, const char *prefix)
 	if (!result && (recurse_submodules != RECURSE_SUBMODULES_OFF)) {
 		const char *options[10];
 		int num_options = 0;
-		if (recurse_submodules_default) {
-			int arg = parse_fetch_recurse_submodules_arg("--recurse-submodules-default", recurse_submodules_default);
-			set_config_fetch_recurse_submodules(arg);
-		}
-		gitmodules_config();
-		git_config(submodule_config, NULL);
 		add_options_to_argv(&num_options, options);
 		result = fetch_populated_submodules(num_options, options,
 						    submodule_prefix,

@@ -7,6 +7,7 @@ git-svn - Bidirectional operation between a Subversion repository and git
 
 SYNOPSIS
 --------
+[verse]
 'git svn' <command> [options] [arguments]
 
 DESCRIPTION
@@ -156,6 +157,17 @@ Skip "branches" and "tags" of first level directories;;
 	affecting the working tree; and the 'rebase' command will be
 	able to update the working tree with the latest changes.
 
+--preserve-empty-dirs;;
+	Create a placeholder file in the local Git repository for each
+	empty directory fetched from Subversion.  This includes directories
+	that become empty by removing all entries in the Subversion
+	repository (but not the directory itself).  The placeholder files
+	are also tracked and removed when no longer necessary.
+
+--placeholder-filename=<filename>;;
+	Set the name of placeholder files created by --preserve-empty-dirs.
+	Default: ".gitignore"
+
 'rebase'::
 	This fetches revisions from the SVN parent of the current HEAD
 	and rebases the current (uncommitted to SVN) work against it.
@@ -210,8 +222,17 @@ discouraged.
 	Add the given merge information during the dcommit
 	(e.g. `--mergeinfo="/branches/foo:1-10"`). All svn server versions can
 	store this information (as a property), and svn clients starting from
-	version 1.5 can make use of it. 'git svn' currently does not use it
-	and does not set it automatically.
+	version 1.5 can make use of it. To specify merge information from multiple
+	branches, use a single space character between the branches
+	(`--mergeinfo="/branches/foo:1-10 /branches/bar:3,5-6,8"`)
++
+[verse]
+config key: svn.pushmergeinfo
++
+This option will cause git-svn to attempt to automatically populate the
+svn:mergeinfo property in the SVN repository when possible. Currently, this can
+only be done when dcommitting non-fast-forward merges where all parents but the
+first have already been pushed into SVN.
 
 'branch'::
 	Create a branch in the SVN repository.
@@ -297,7 +318,7 @@ Any other arguments are passed directly to 'git log'
        Show what revision and author last modified each line of a file. The
        output of this mode is format-compatible with the output of
        `svn blame' by default. Like the SVN blame command,
-       local uncommitted changes in the working copy are ignored;
+       local uncommitted changes in the working tree are ignored;
        the version of the file in the HEAD revision is annotated. Unknown
        arguments are passed directly to 'git blame'.
 +
@@ -339,6 +360,8 @@ Any other arguments are passed directly to 'git log'
 	Empty directories are automatically recreated when using
 	"git svn clone" and "git svn rebase", so "mkdirs" is intended
 	for use after commands like "git checkout" or "git reset".
+	(See the svn-remote.<name>.automkdirs config file option for
+	more information.)
 
 'commit-diff'::
 	Commits the diff of two tree-ish arguments from the
@@ -680,6 +703,14 @@ svn.pathnameencoding::
 	locales to avoid corrupted file names with non-ASCII characters.
 	Valid encodings are the ones supported by Perl's Encode module.
 
+svn-remote.<name>.automkdirs::
+	Normally, the "git svn clone" and "git svn rebase" commands
+	attempt to recreate empty directories that are in the
+	Subversion repository.  If this option is set to "false", then
+	empty directories will only be created if the "git svn mkdirs"
+	command is run explicitly.  If unset, 'git svn' assumes this
+	option to be "true".
+
 Since the noMetadata, rewriteRoot, rewriteUUID, useSvnsyncProps and useSvmProps
 options all affect the metadata generated and used by 'git svn'; they
 *must* be set in the configuration file before any history is imported
@@ -774,10 +805,9 @@ use `git svn rebase` to update your work branch instead of `git pull` or
 when committing into SVN, which can lead to merge commits reversing
 previous commits in SVN.
 
-DESIGN PHILOSOPHY
------------------
-Merge tracking in Subversion is lacking and doing branched development
-with Subversion can be cumbersome as a result.  While 'git svn' can track
+MERGE TRACKING
+--------------
+While 'git svn' can track
 copy history (including branches and tags) for repositories adopting a
 standard layout, it cannot yet represent merge history that happened
 inside git back upstream to SVN users.  Therefore it is advised that
@@ -787,16 +817,15 @@ compatibility with SVN (see the CAVEATS section below).
 CAVEATS
 -------
 
-For the sake of simplicity and interoperating with a less-capable system
-(SVN), it is recommended that all 'git svn' users clone, fetch and dcommit
+For the sake of simplicity and interoperating with Subversion,
+it is recommended that all 'git svn' users clone, fetch and dcommit
 directly from the SVN server, and avoid all 'git clone'/'pull'/'merge'/'push'
 operations between git repositories and branches.  The recommended
 method of exchanging code between git branches and users is
 'git format-patch' and 'git am', or just 'dcommit'ing to the SVN repository.
 
 Running 'git merge' or 'git pull' is NOT recommended on a branch you
-plan to 'dcommit' from.  Subversion does not represent merges in any
-reasonable or useful fashion; so users using Subversion cannot see any
+plan to 'dcommit' from because Subversion users cannot see any
 merges you've made.  Furthermore, if you merge or pull from a git branch
 that is a mirror of an SVN branch, 'dcommit' may commit to the wrong
 branch.
@@ -846,7 +875,7 @@ Renamed and copied directories are not detected by git and hence not
 tracked when committing to SVN.  I do not plan on adding support for
 this as it's quite difficult and time-consuming to get working for all
 the possible corner cases (git doesn't do it, either).  Committing
-renamed and copied files are fully supported if they're similar enough
+renamed and copied files is fully supported if they're similar enough
 for git to detect them.
 
 CONFIGURATION

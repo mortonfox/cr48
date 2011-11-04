@@ -224,13 +224,15 @@ static int fsck_tree(struct tree *item, int strict, fsck_error error_func)
 
 static int fsck_ident(char **ident, struct object *obj, fsck_error error_func)
 {
-	if (**ident == '<' || **ident == '\n')
+	if (**ident == '<')
 		return error_func(obj, FSCK_ERROR, "invalid author/committer line - missing space before email");
-	*ident += strcspn(*ident, "<\n");
-	if ((*ident)[-1] != ' ')
-		return error_func(obj, FSCK_ERROR, "invalid author/committer line - missing space before email");
+	*ident += strcspn(*ident, "<>\n");
+	if (**ident == '>')
+		return error_func(obj, FSCK_ERROR, "invalid author/committer line - bad name");
 	if (**ident != '<')
 		return error_func(obj, FSCK_ERROR, "invalid author/committer line - missing email");
+	if ((*ident)[-1] != ' ')
+		return error_func(obj, FSCK_ERROR, "invalid author/committer line - missing space before email");
 	(*ident)++;
 	*ident += strcspn(*ident, "<>\n");
 	if (**ident != '>')
@@ -349,7 +351,7 @@ int fsck_error_function(struct object *obj, int type, const char *fmt, ...)
 	va_list ap;
 	struct strbuf sb = STRBUF_INIT;
 
-	strbuf_addf(&sb, "object %s:", obj->sha1?sha1_to_hex(obj->sha1):"(null)");
+	strbuf_addf(&sb, "object %s:", sha1_to_hex(obj->sha1));
 
 	va_start(ap, fmt);
 	strbuf_vaddf(&sb, fmt, ap);

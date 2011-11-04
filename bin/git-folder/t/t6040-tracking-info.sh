@@ -42,13 +42,13 @@ b3 behind 1
 b4 ahead 2
 EOF
 
-test_expect_success C_LOCALE_OUTPUT 'branch -v' '
+test_expect_success 'branch -v' '
 	(
 		cd test &&
 		git branch -v
 	) |
 	sed -n -e "$script" >actual &&
-	test_cmp expect actual
+	test_i18ncmp expect actual
 '
 
 test_expect_success 'checkout' '
@@ -110,4 +110,18 @@ test_expect_success '--set-upstream does not change branch' '
 	grep -q "^refs/heads/master$" actual &&
 	cmp expect2 actual2
 '
+
+test_expect_success '--set-upstream @{-1}' '
+	git checkout from-master &&
+	git checkout from-master2 &&
+	git config branch.from-master2.merge > expect2 &&
+	git branch --set-upstream @{-1} follower &&
+	git config branch.from-master.merge > actual &&
+	git config branch.from-master2.merge > actual2 &&
+	git branch --set-upstream from-master follower &&
+	git config branch.from-master.merge > expect &&
+	test_cmp expect2 actual2 &&
+	test_cmp expect actual
+'
+
 test_done

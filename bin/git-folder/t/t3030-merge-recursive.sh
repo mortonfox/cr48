@@ -267,7 +267,8 @@ test_expect_success 'setup 8' '
 		ln -s e a &&
 		git add a e &&
 		test_tick &&
-		git commit -m "rename a->e, symlink a->e"
+		git commit -m "rename a->e, symlink a->e" &&
+		oln=`printf e | git hash-object --stdin`
 	fi
 '
 
@@ -312,20 +313,20 @@ test_expect_success 'merge-recursive result' '
 
 '
 
-test_expect_success C_LOCALE_OUTPUT 'fail if the index has unresolved entries' '
+test_expect_success 'fail if the index has unresolved entries' '
 
 	rm -fr [abcd] &&
 	git checkout -f "$c1" &&
 
 	test_must_fail git merge "$c5" &&
 	test_must_fail git merge "$c5" 2> out &&
-	grep "not possible because you have unmerged files" out &&
+	test_i18ngrep "not possible because you have unmerged files" out &&
 	git add -u &&
 	test_must_fail git merge "$c5" 2> out &&
-	grep "You have not concluded your merge" out &&
+	test_i18ngrep "You have not concluded your merge" out &&
 	rm -f .git/MERGE_HEAD &&
 	test_must_fail git merge "$c5" 2> out &&
-	grep "Your local changes to the following files would be overwritten by merge:" out
+	test_i18ngrep "Your local changes to the following files would be overwritten by merge:" out
 '
 
 test_expect_success 'merge-recursive remove conflict' '
@@ -630,16 +631,18 @@ test_expect_success 'merge-recursive copy vs. rename' '
 
 if test_have_prereq SYMLINKS
 then
-	test_expect_success 'merge-recursive rename vs. rename/symlink' '
+	test_expect_failure 'merge-recursive rename vs. rename/symlink' '
 
 		git checkout -f rename &&
 		git merge rename-ln &&
 		( git ls-tree -r HEAD ; git ls-files -s ) >actual &&
 		(
+			echo "120000 blob $oln	a"
 			echo "100644 blob $o0	b"
 			echo "100644 blob $o0	c"
 			echo "100644 blob $o0	d/e"
 			echo "100644 blob $o0	e"
+			echo "120000 $oln 0	a"
 			echo "100644 $o0 0	b"
 			echo "100644 $o0 0	c"
 			echo "100644 $o0 0	d/e"

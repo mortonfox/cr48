@@ -258,12 +258,7 @@ static void write_message(struct strbuf *msgbuf, const char *filename)
 
 static struct tree *empty_tree(void)
 {
-	struct tree *tree = xcalloc(1, sizeof(struct tree));
-
-	tree->object.parsed = 1;
-	tree->object.type = OBJ_TREE;
-	pretend_sha1_file(NULL, 0, OBJ_TREE, tree->object.sha1);
-	return tree;
+	return lookup_tree((const unsigned char *)EMPTY_TREE_SHA1_BIN);
 }
 
 static NORETURN void die_dirty_index(const char *me)
@@ -408,8 +403,6 @@ static int do_pick_commit(void)
 	discard_cache();
 
 	if (!commit->parents) {
-		if (action == REVERT)
-			die (_("Cannot revert a root commit"));
 		parent = NULL;
 	}
 	else if (commit->parents->next) {
@@ -467,7 +460,7 @@ static int do_pick_commit(void)
 		strbuf_addstr(&msgbuf, "\"\n\nThis reverts commit ");
 		strbuf_addstr(&msgbuf, sha1_to_hex(commit->object.sha1));
 
-		if (commit->parents->next) {
+		if (commit->parents && commit->parents->next) {
 			strbuf_addstr(&msgbuf, ", reversing\nchanges made to ");
 			strbuf_addstr(&msgbuf, sha1_to_hex(parent->object.sha1));
 		}

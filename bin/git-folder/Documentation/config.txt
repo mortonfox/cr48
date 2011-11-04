@@ -147,7 +147,7 @@ advice.*::
 
 core.fileMode::
 	If false, the executable bit differences between the index and
-	the working copy are ignored; useful on broken filesystems like FAT.
+	the working tree are ignored; useful on broken filesystems like FAT.
 	See linkgit:git-update-index[1].
 +
 The default is true, except linkgit:git-clone[1] or linkgit:git-init[1]
@@ -179,7 +179,7 @@ is created.
 
 core.trustctime::
 	If false, the ctime differences between the index and the
-	working copy are ignored; useful when the inode change time
+	working tree are ignored; useful when the inode change time
 	is regularly modified by something outside Git (file system
 	crawlers and some backup systems).
 	See linkgit:git-update-index[1]. True by default.
@@ -292,7 +292,7 @@ core.ignoreStat::
 	If true, commands which modify both the working tree and the index
 	will mark the updated paths with the "assume unchanged" bit in the
 	index. These marked files are then assumed to stay unchanged in the
-	working copy, until you	mark them otherwise manually - Git will not
+	working tree, until you mark them otherwise manually - Git will not
 	detect the file changes	by lstat() calls. This is useful on systems
 	where those are very slow, such as Microsoft Windows.
 	See linkgit:git-update-index[1].
@@ -344,7 +344,9 @@ core.logAllRefUpdates::
 	SHA1, the date/time and the reason of the update, but
 	only when the file exists.  If this configuration
 	variable is set to true, missing "$GIT_DIR/logs/<ref>"
-	file is automatically created for branch heads.
+	file is automatically created for branch heads (i.e. under
+	refs/heads/), remote refs (i.e. under refs/remotes/),
+	note refs (i.e. under refs/notes/), and the symbolic ref HEAD.
 +
 This information can be used to determine what commit
 was the tip of a branch "2 days ago".
@@ -587,6 +589,8 @@ it will be treated as a shell command.  For example, defining
 "gitk --all --not ORIG_HEAD".  Note that shell commands will be
 executed from the top-level directory of a repository, which may
 not necessarily be the current directory.
+'GIT_PREFIX' is set as returned by running 'git rev-parse --show-prefix'
+from the original current directory. See linkgit:git-rev-parse[1].
 
 am.keepcr::
 	If true, git-am will call git-mailsplit for patches in mbox format
@@ -641,7 +645,7 @@ branch.<name>.remote::
 
 branch.<name>.merge::
 	Defines, together with branch.<name>.remote, the upstream branch
-	for the given branch. It tells 'git fetch'/'git pull' which
+	for the given branch. It tells 'git fetch'/'git pull'/'git rebase' which
 	branch to merge and can also affect 'git push' (see push.default).
 	When in branch <name>, it tells 'git fetch' the default
 	refspec to be marked for merging in FETCH_HEAD. The value is
@@ -674,7 +678,7 @@ branch.<name>.rebase::
 browser.<tool>.cmd::
 	Specify the command to invoke the specified browser. The
 	specified command is evaluated in shell with the URLs passed
-	as arguments. (See linkgit:git-web--browse[1].)
+	as arguments. (See linkgit:git-web{litdd}browse[1].)
 
 browser.<tool>.path::
 	Override the path for the given tool that may be used to
@@ -706,9 +710,16 @@ second is the background.  The position of the attribute, if any,
 doesn't matter.
 
 color.diff::
-	When set to `always`, always use colors in patch.
-	When false (or `never`), never.  When set to `true` or `auto`, use
-	colors only when the output is to the terminal. Defaults to false.
+	Whether to use ANSI escape sequences to add color to patches.
+	If this is set to `always`, linkgit:git-diff[1],
+	linkgit:git-log[1], and linkgit:git-show[1] will use color
+	for all patches.  If it is set to `true` or `auto`, those
+	commands will only use color when output is to the terminal.
+	Defaults to false.
++
+This does not affect linkgit:git-format-patch[1] nor the
+'git-diff-{asterisk}' plumbing commands.  Can be overridden on the
+command line with the `--color[=<when>]` option.
 
 color.diff.<slot>::
 	Use customized color for diff colorization.  `<slot>` specifies
@@ -794,11 +805,15 @@ color.status.<slot>::
 	color.branch.<slot>.
 
 color.ui::
-	When set to `always`, always use colors in all git commands which
-	are capable of colored output. When false (or `never`), never. When
-	set to `true` or `auto`, use colors only when the output is to the
-	terminal. When more specific variables of color.* are set, they always
-	take precedence over this setting. Defaults to false.
+	This variable determines the default value for variables such
+	as `color.diff` and `color.grep` that control the use of color
+	per command family. Its scope will expand as more commands learn
+	configuration to set a default for the `--color` option.  Set it
+	to `always` if you want all output not intended for machine
+	consumption to use color, to `true` or `auto` if you want such
+	output to use color when written to the terminal, or to `false` or
+	`never` if you prefer git commands not to use color unless enabled
+	explicitly with some other configuration or the `--color` option.
 
 commit.status::
 	A boolean to enable/disable inclusion of status information in the
@@ -810,68 +825,7 @@ commit.template::
 	"{tilde}/" is expanded to the value of `$HOME` and "{tilde}user/" to the
 	specified user's home directory.
 
-diff.autorefreshindex::
-	When using 'git diff' to compare with work tree
-	files, do not consider stat-only change as changed.
-	Instead, silently run `git update-index --refresh` to
-	update the cached stat information for paths whose
-	contents in the work tree match the contents in the
-	index.  This option defaults to true.  Note that this
-	affects only 'git diff' Porcelain, and not lower level
-	'diff' commands such as 'git diff-files'.
-
-diff.external::
-	If this config variable is set, diff generation is not
-	performed using the internal diff machinery, but using the
-	given command.  Can be overridden with the `GIT_EXTERNAL_DIFF'
-	environment variable.  The command is called with parameters
-	as described under "git Diffs" in linkgit:git[1].  Note: if
-	you want to use an external diff program only on a subset of
-	your files, you	might want to use linkgit:gitattributes[5] instead.
-
-diff.mnemonicprefix::
-	If set, 'git diff' uses a prefix pair that is different from the
-	standard "a/" and "b/" depending on what is being compared.  When
-	this configuration is in effect, reverse diff output also swaps
-	the order of the prefixes:
-`git diff`;;
-	compares the (i)ndex and the (w)ork tree;
-`git diff HEAD`;;
-	 compares a (c)ommit and the (w)ork tree;
-`git diff --cached`;;
-	compares a (c)ommit and the (i)ndex;
-`git diff HEAD:file1 file2`;;
-	compares an (o)bject and a (w)ork tree entity;
-`git diff --no-index a b`;;
-	compares two non-git things (1) and (2).
-
-diff.noprefix::
-	If set, 'git diff' does not show any source or destination prefix.
-
-diff.renameLimit::
-	The number of files to consider when performing the copy/rename
-	detection; equivalent to the 'git diff' option '-l'.
-
-diff.renames::
-	Tells git to detect renames.  If set to any boolean value, it
-	will enable basic rename detection.  If set to "copies" or
-	"copy", it will detect copies, as well.
-
-diff.ignoreSubmodules::
-	Sets the default value of --ignore-submodules. Note that this
-	affects only 'git diff' Porcelain, and not lower level 'diff'
-	commands such as 'git diff-files'. 'git checkout' also honors
-	this setting when reporting uncommitted changes.
-
-diff.suppressBlankEmpty::
-	A boolean to inhibit the standard behavior of printing a space
-	before each empty output line. Defaults to false.
-
-diff.tool::
-	Controls which diff tool is used.  `diff.tool` overrides
-	`merge.tool` when used by linkgit:git-difftool[1] and has
-	the same valid values as `merge.tool` minus "tortoisemerge"
-	and plus "kompare".
+include::diff-config.txt[]
 
 difftool.<tool>.path::
 	Override the path for the given tool.  This is useful in case
@@ -974,6 +928,16 @@ format.signoff::
     patch should be a conscious act and means that you certify you have
     the rights to submit this work under the same open source license.
     Please see the 'SubmittingPatches' document for further discussion.
+
+filter.<driver>.clean::
+	The command which is used to convert the content of a worktree
+	file to a blob upon checkin.  See linkgit:gitattributes[5] for
+	details.
+
+filter.<driver>.smudge::
+	The command which is used to convert the content of a blob
+	object to a worktree file upon checkout.  See
+	linkgit:gitattributes[5] for details.
 
 gc.aggressiveWindow::
 	The window size parameter used in the delta compression
@@ -1234,6 +1198,14 @@ http.proxy::
 	environment variable (see linkgit:curl[1]).  This can be overridden
 	on a per-remote basis; see remote.<name>.proxy
 
+http.cookiefile::
+	File containing previously stored cookie lines which should be used
+	in the git http session, if they match the server. The file format
+	of the file to read cookies from should be plain HTTP headers or
+	the Netscape/Mozilla cookie file format (see linkgit:curl[1]).
+	NOTE that the file specified with http.cookiefile is only used as
+	input. No cookies will be stored in the file.
+
 http.sslVerify::
 	Whether to verify the SSL certificate when fetching or pushing
 	over HTTPS. Can be overridden by the 'GIT_SSL_NO_VERIFY' environment
@@ -1347,9 +1319,16 @@ instaweb.port::
 interactive.singlekey::
 	In interactive commands, allow the user to provide one-letter
 	input with a single key (i.e., without hitting enter).
-	Currently this is used only by the `\--patch` mode of
-	linkgit:git-add[1].  Note that this setting is silently
-	ignored if portable keystroke input is not available.
+	Currently this is used by the `\--patch` mode of
+	linkgit:git-add[1], linkgit:git-checkout[1], linkgit:git-commit[1],
+	linkgit:git-reset[1], and linkgit:git-stash[1]. Note that this
+	setting is silently ignored if portable keystroke input
+	is not available.
+
+log.abbrevCommit::
+	If true, makes linkgit:git-log[1], linkgit:git-show[1], and
+	linkgit:git-whatchanged[1] assume `\--abbrev-commit`. You may
+	override this option with `\--no-abbrev-commit`.
 
 log.date::
 	Set the default date-time mode for the 'log' command.
@@ -1474,7 +1453,8 @@ notes.rewriteRef::
 	You may also specify this configuration several times.
 +
 Does not have a default value; you must configure this variable to
-enable note rewriting.
+enable note rewriting.  Set it to `refs/notes/commits` to enable
+rewriting for the default commit notes.
 +
 This setting can be overridden with the `GIT_NOTES_REWRITE_REF`
 environment variable, which must be a colon separated list of refs or

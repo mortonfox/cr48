@@ -107,6 +107,7 @@ error: The following untracked working tree files would be overwritten by merge:
 	sub
 	sub2
 Please move or remove them before you can merge.
+Aborting
 EOF
 
 test_expect_success 'will not overwrite untracked file in leading path' '
@@ -150,11 +151,8 @@ test_expect_success 'will not overwrite untracked file on unborn branch' '
 	git rm -fr . &&
 	git checkout --orphan new &&
 	cp important c0.c &&
-	test_must_fail git merge c0 2>out
-'
-
-test_expect_success C_LOCALE_OUTPUT 'will not overwrite untracked file on unborn branch: output' '
-	test_cmp out expect
+	test_must_fail git merge c0 2>out &&
+	test_i18ncmp out expect
 '
 
 test_expect_success 'will not overwrite untracked file on unborn branch .git/MERGE_HEAD sanity etc.' '

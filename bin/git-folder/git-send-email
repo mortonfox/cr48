@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-use lib (split(/:/, $ENV{GITPERLLIB} || "/home/pcheah/local/lib/perl5/site_perl/5.8.8"));
+use lib (split(/:/, $ENV{GITPERLLIB} || "/home/pcheah/local/share/perl/5.12.4"));
 #
 # Copyright 2002,2005 Greg Kroah-Hartman <greg@kroah.com>
 # Copyright 2005 Ryan Anderson <ryan@michonline.com>
@@ -969,7 +969,7 @@ sub send_message {
 	@recipients = unique_email_list(@recipients,@cc,@bcclist);
 	@recipients = (map { extract_valid_address($_) } @recipients);
 	my $date = format_2822_time($time++);
-	my $gitversion = '1.7.5.2';
+	my $gitversion = '1.7.7.2';
 	if ($gitversion =~ m/..GIT_VERSION../) {
 	    $gitversion = Git::version();
 	}
@@ -1080,7 +1080,7 @@ X-Mailer: git-send-email $gitversion
 					$smtp_encryption = '';
 					# Send EHLO again to receive fresh
 					# supported commands
-					$smtp->hello();
+					$smtp->hello($smtp_domain);
 				} else {
 					die "Server does not support STARTTLS! ".$smtp->message;
 				}

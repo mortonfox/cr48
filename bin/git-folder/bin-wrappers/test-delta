@@ -4,18 +4,18 @@
 # to run test suite against sandbox, but with only bindir-installed
 # executables in PATH.  The Makefile copies this into various
 # files in bin-wrappers, substituting
-# /home/pcheah/git-1.7.5.2 and test-delta.
+# /home/chronos/user/bin/git-folder and test-delta.
 
-GIT_EXEC_PATH='/home/pcheah/git-1.7.5.2'
+GIT_EXEC_PATH='/home/chronos/user/bin/git-folder'
 if test -n "$NO_SET_GIT_TEMPLATE_DIR"
 then
 	unset GIT_TEMPLATE_DIR
 else
-	GIT_TEMPLATE_DIR='/home/pcheah/git-1.7.5.2/templates/blt'
+	GIT_TEMPLATE_DIR='/home/chronos/user/bin/git-folder/templates/blt'
 	export GIT_TEMPLATE_DIR
 fi
-GITPERLLIB='/home/pcheah/git-1.7.5.2/perl/blib/lib'
-PATH='/home/pcheah/git-1.7.5.2/bin-wrappers:'"$PATH"
+GITPERLLIB='/home/chronos/user/bin/git-folder/perl/blib/lib'
+PATH='/home/chronos/user/bin/git-folder/bin-wrappers:'"$PATH"
 export GIT_EXEC_PATH GITPERLLIB PATH
 
 exec "${GIT_EXEC_PATH}/test-delta" "$@"
