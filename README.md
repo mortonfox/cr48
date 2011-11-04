@@ -19,7 +19,7 @@ I took a standard install of Ubuntu 10.10 32 bit and staticly compiled a bunch o
  * ruby 1.9.2 with rubygems 1.8.4
  * mercurial 1.7.5
  * git 1.7.7.2
- * Subversion 1.6.16
+ * Subversion 1.7.1
  * GNU diffutils 3.0
  * rsync 3.0.8
  * Info-ZIP unzip 6.0 and zip 3.0
