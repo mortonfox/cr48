@@ -15,7 +15,7 @@ I took a standard install of Ubuntu 10.10 32 bit and staticly compiled a bunch o
 ### What is included
  * vim 7.3.353 (with no gui and some nice .vimrc tweaks)
  * python 2.6.6 (currently throwing a libz.so and libcrypto.so errors, but nothing serious)
- * perl 5.12.2
+ * perl 5.14.2
  * ruby 1.9.2 with rubygems 1.8.4
  * mercurial 2.0
  * git 1.7.7.2
